@@ -1,0 +1,48 @@
+services:
+  # 1. 核心 Web 服务 (Flask)
+  web:
+    build: .
+    container_name: focusread_web
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app  # 将本地代码挂载到容器，代码修改实时生效
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      # 注入数据库和 Redis 的连接配置
+      - DATABASE_URL=mysql+pymysql://focus_user:focus_pass@db:3306/focusread
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - redis
+    # 允许容器通过 host.docker.internal 访问宿主机的代理软件
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  # 2. MySQL 数据库
+  db:
+    image: mysql:8.0
+    container_name: focusread_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: focusread
+      MYSQL_USER: focus_user
+      MYSQL_PASSWORD: focus_pass
+      MYSQL_ROOT_PASSWORD: root_pass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql 
+
+  # 3. Redis 缓存与消息队列
+  redis:
+    image: redis:6  # 修复：改为精确的大版本号 6
+    container_name: focusread_redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+volumes:
+  mysql_data:
